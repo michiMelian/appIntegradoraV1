@@ -1,6 +1,7 @@
 import {
   IsBoolean,
   IsEnum,
+  IsNotEmpty,
   IsNumber,
   IsObject,
   IsOptional,
@@ -13,14 +14,15 @@ export class CreateTaskDto {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
+  @IsNotEmpty()
   @IsString()
   titulo: string;
 
   @IsString()
   descripcion: string;
 
-  @IsNumber()
-  fechadv: number;
+  @IsString()
+  fechadv: string;
 
   @IsString()
   @IsEnum(['pendiente', 'en progreso', 'completada'])

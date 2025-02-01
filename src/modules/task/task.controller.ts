@@ -10,6 +10,7 @@ import {
   ConflictException,
   UseGuards,
   Headers,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { TaskService } from './task.service';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -30,11 +31,11 @@ export class TaskController {
     private readonly authService: AuthService,
   ) {}
 
-  @Roles('Administrador')
+  @Roles('administrador')
   @Post()
   async createTask(
     @Body() createTask: CreateTaskDto,
-    @Headers() headers: Record<string, string>,
+    @Headers() headers: Headers,
   ) {
     const Tasks = await this.TaskService.getNameofTaskAndId();
     const validation = validationGlobal(createTask.titulo, Tasks);
@@ -45,43 +46,48 @@ export class TaskController {
     return await this.TaskService.createTask(createTask, headers);
   }
 
-  @Roles('Administrador')
+  @Roles('administrador')
   @Get()
   async getTasks(@Query() pagination: PaginationQueryDto): Promise<Task[]> {
     return await this.TaskService.getTasks(pagination);
   }
 
-  @Roles('Administrador')
+  @Roles('administrador')
   @Get(':id')
   async getTask(@Param('id') id: number): Promise<Task> {
     return await this.TaskService.getTask(id);
   }
 
-  @Roles('Administrador')
+  @Roles('administrador')
   @Patch(':id')
-  async updateTask(@Param('id') id: number, @Body() updateDto: UpdateTaskDto) {
-    const TaskAactualizar: Task = await this.TaskService.getTask(id);
-    const todosConnombreYid: Task[] =
-      await this.TaskService.getNameofTaskAndId();
+  async updateFichaProfesional(
+    @Param('id') id: number,
+    @Body() updateDto: UpdateTaskDto,
+  ) {
+    console.log(id);
+
+    const TaskAactualizar = await this.TaskService.getTask(id);
+    const todosConnombreYid = await this.TaskService.getNameofTaskAndId();
     const validation = validationUpdate(
-      { name: TaskAactualizar.titulo, id: TaskAactualizar.id },
-      todosConnombreYid as unknown as { name: string; id: number }[],
+      TaskAactualizar,
+      todosConnombreYid,
       updateDto,
     );
     if (validation) {
-      throw new ConflictException(`Existe una Tarea con el mismo nombre`);
+      throw new ConflictException(
+        `Existe una ficha profesional el mismo nombre`,
+      );
     }
-
     return await this.TaskService.updateTask(id, updateDto);
   }
 
-  @Roles('Administrador')
+  @Roles('administrador')
   @Delete(':id')
-  async removeTask(@Param('id') id: number) {
+  async removeTask(@Param('id', ParseIntPipe) id: number) {
     return await this.TaskService.removeTask(id);
   }
 
-  @Roles('Administrador')
+  @Roles('administrador')
   @Get('proximas-vencimiento/:dias')
   async getTasksCercanas(@Param('dias') dias: number): Promise<Task[]> {
     return await this.TaskService.getTasksCercanas(dias);

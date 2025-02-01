@@ -9,6 +9,9 @@ import { AuthModule } from './modules/auth/auth.module';
 import { TaskModule } from './modules/task/task.module';
 import { ProfileModule } from './modules/profile/profile.module';
 import { TagModule } from './modules/tag/tag.module';
+import { User } from './modules/users/entities';
+import { Profile } from './modules/profile/entities/profile.entity';
+import { Tag } from './modules/tag/entities/tag.entity';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -20,7 +23,8 @@ import { TagModule } from './modules/tag/tag.module';
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
-      autoLoadEntities: true,
+      entities: [Task, User, Profile, Tag],
+      // autoLoadEntities: true,
       synchronize: true,
     }),
     TaskModule,

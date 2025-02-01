@@ -8,12 +8,13 @@ import {
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Task } from './entities/task.entity';
+import { Task } from 'src/modules/task/entities/task.entity';
 import { Repository, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 import { User } from '../users/entities';
 import { PaginationQueryDto } from './dto/pagination-query.dto';
 import { AuthService } from '../auth/service/auth.service';
 import { Cron } from '@nestjs/schedule';
+import { fecha } from 'src/common/utils/fechadv';
 
 @Injectable()
 export class TaskService {
@@ -26,36 +27,37 @@ export class TaskService {
     private readonly authService: AuthService,
   ) {}
 
-  async createTask(createTask: CreateTaskDto, headers) {
+  async createTask(createTask: CreateTaskDto, headers: any) {
     try {
-      const user = await this.userRepository.findOne({
-        where: { id: createTask.user },
-      });
-
-      if (!user) {
-        throw new ConflictException(
-          `El usuario con ID ${createTask.user} no existe`,
-        );
-      }
-
       const user1: any = await this.authService.getUserByToken(
         headers.authorization,
       );
-      const userEmail: string = user1.user;
+      const user = await this.userRepository.findOne({
+        where: { email: user1.user },
+      });
 
-      if (userEmail !== user.email) {
-        throw new UnauthorizedException(`No tiene permiso para esta acción`);
+      if (!user) {
+        throw new ConflictException(`El usuario con ID ${user.id} no existe`);
       }
 
-      const Task = this.TaskRepository.create({
+      const userEmail: string = user1.user;
+
+      // if (userEmail !== user.email) {
+      //   throw new UnauthorizedException(`No tiene permiso para esta acción`);
+      // }
+
+      // const date = new Date(createTask.fechadv);
+
+      const Task = await this.TaskRepository.save({
         titulo: createTask.titulo,
         descripcion: createTask.descripcion,
-        fechadv: createTask.fechadv,
+        fechadv: new Date().toISOString().split('T')[0],
+
         estado: createTask.estado,
         user: user,
       });
 
-      await this.TaskRepository.save(Task);
+      // await this.TaskRepository.save(Task);
       return {
         message: 'Tarea creada exitosamente',
         data: Task,
@@ -74,7 +76,7 @@ export class TaskService {
 
       return await this.TaskRepository.find({
         where: {
-          fechadv: Between(today, futureDate),
+          fechadv: Between(today, futureDate).toString(),
         },
         relations: ['user'],
       });
@@ -130,16 +132,24 @@ export class TaskService {
 
   async updateTask(id: number, updateTask: UpdateTaskDto) {
     try {
+      console.log('Buscando tarea con id:', id); // 👀 Debug
+
       const Task = await this.TaskRepository.findOne({
         where: { id },
         relations: ['user'],
       });
 
       if (!Task) {
+        console.error('❌ Tarea no encontrada con id:', id);
         throw new NotFoundException('Tarea no encontrada');
       }
+      const obj = {
+        ...updateTask,
+        fechadv: fecha(updateTask.fechadv),
+      };
 
-      Object.assign(Task, updateTask);
+      console.log('✅ Tarea encontrada:', Task);
+      Object.assign(Task, obj);
 
       await this.TaskRepository.save(Task);
 
@@ -155,18 +165,22 @@ export class TaskService {
 
   async removeTask(id: number) {
     try {
-      const Task = await this.TaskRepository.findOne({
+      const task = await this.TaskRepository.findOne({
         where: { id },
+        relations: ['user'],
       });
 
-      if (!Task) {
-        throw new NotFoundException('Tarea no encontrada');
+      if (!task) {
+        throw new NotFoundException('❌ Tarea no encontrada');
       }
 
-      await this.TaskRepository.remove(Task);
-
+      await this.TaskRepository.createQueryBuilder()
+        .delete()
+        .from(Task)
+        .where('id = :id', { id })
+        .execute();
       return {
-        message: 'Tarea eliminada correctamente',
+        message: '✅ Tarea eliminada correctamente',
       };
     } catch (error) {
       console.error('Error en removeTask', error);
@@ -178,7 +192,7 @@ export class TaskService {
   async checkTasks(): Promise<void> {
     try {
       const days = 3;
-      const tasks = await this.getTasksCloseToDueDate(days);
+      const tasks = await this.getTasksCercanas(days);
 
       if (!tasks.length) {
         console.log('No hay Tareas próximas a vencer en los próximos días.');
@@ -194,7 +208,7 @@ export class TaskService {
           return;
         }
 
-        const message = `La Tarea "${task.titulo}" está próxima a vencer el ${task.fechadv.toLocaleDateString()}.`;
+        const message = `La Tarea "${task.titulo}" está próxima a vencer el ${task.fechadv}.`;
 
         try {
           this.notificationService.sendEmail(
@@ -221,7 +235,7 @@ export class TaskService {
     }
   }
 
-  async getTasksCloseToDueDate(days: number): Promise<Task[]> {
+  /*async getTasksCloseToDueDate(days: number): Promise<Task[]> {
     try {
       const today = new Date();
       const upperLimit = new Date();
@@ -229,7 +243,7 @@ export class TaskService {
 
       return await this.TaskRepository.find({
         where: {
-          fechadv: Between(today, upperLimit),
+          fechadv: Between(today, upperLimit).toString(),
         },
         relations: ['user'],
       });
@@ -242,5 +256,5 @@ export class TaskService {
         'Ocurrió un error al obtener las Tareas próximas a vencer.',
       );
     }
-  }
+  }*/
 }

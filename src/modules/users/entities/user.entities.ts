@@ -28,13 +28,13 @@ export class User {
   @Column({ nullable: false })
   password: string;
 
-  @Column()
+  @Column({ type: 'varchar', nullable: false, default: 'user' })
   rol: string;
 
   @Column({ nullable: false })
   perfilld: string;
 
-  @ManyToMany(() => Task, (task) => task.user)
+  @OneToMany(() => Task, (task) => task.user)
   task: Task[];
 
   @ManyToOne(() => Profile, (perfil) => perfil.user, { cascade: true })

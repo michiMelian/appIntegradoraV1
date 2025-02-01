@@ -8,6 +8,8 @@ import {
   CreateDateColumn,
   ManyToMany,
   JoinColumn,
+  JoinTable,
+  ManyToOne,
 } from 'typeorm';
 
 @Entity()
@@ -22,14 +24,12 @@ export class Task {
   descripcion: string;
 
   @Column('timestamp') // Asegúrate de usar el tipo correcto para la fecha
-  fechadv: Date;
+  fechadv: string;
 
   @Column()
   estado: string;
 
-  @ManyToMany(() => User, (user) => user.task, {
-    cascade: true,
-  })
+  @ManyToOne(() => User, (user) => user.task, { onDelete: 'SET NULL' })
   @JoinColumn()
   user: User;
 
